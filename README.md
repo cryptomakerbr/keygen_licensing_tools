@@ -24,6 +24,10 @@ from keygen_licensing_tools import validate_license_key_online
 out = validate_license_key_online(
     account_id="demo", key="DEMO-DAD877-FCBF82-B83D5A-03E644-V3"
 )
+
+if not out.is_valid:
+    print(f"Error: Invalid license ({out.code}). Exiting.")
+    exit(1)
 ```
 
 The `out` object contains useful information such as
@@ -50,7 +54,6 @@ out = validate_license_key_cached(
     refresh_cache_period=timedelta(days=3),
 )
 
-# Actually use the data:
 if not out.is_valid:
     print(f"Error: Invalid license ({out.code}). Exiting.")
     exit(1)
