@@ -50,7 +50,16 @@ def validate_license_key_online(account_id: str, key: str):
     return _create_return_value(res.json())
 
 
-def _create_return_value(data: dict):
+def _create_return_value(data: dict | None):
+    if data is None:
+        return SimpleNamespace(
+            is_valid=False,
+            code="ERR",
+            timestamp=None,
+            license_creation_time=None,
+            license_expiry_time=None,
+        )
+
     timestamp = datetime.strptime(data["meta"]["ts"], "%Y-%m-%dT%H:%M:%S.%fZ")
 
     if data["data"] is None:
@@ -58,8 +67,8 @@ def _create_return_value(data: dict):
             is_valid=data["meta"]["valid"],
             code=data["meta"]["constant"],
             timestamp=timestamp,
-            time_to_expiration=None,
             license_creation_time=None,
+            license_expiry_time=None,
         )
 
     if "errors" in data:
@@ -71,26 +80,24 @@ def _create_return_value(data: dict):
             is_valid=False,
             code=code,
             timestamp=timestamp,
-            time_to_expiration=None,
             license_creation_time=None,
+            license_expiry_time=None,
         )
 
     # string format: 2023-01-01T00:00:00.000Z
     attr = data["data"]["attributes"]
     created = datetime.strptime(attr["created"], "%Y-%m-%dT%H:%M:%S.%fZ")
     if attr["expiry"] is None:
-        time_to_expiration = None
+        license_expiry_time = None
     else:
-        expiry = datetime.strptime(attr["expiry"], "%Y-%m-%dT%H:%M:%S.%fZ")
-        now = datetime.utcnow()
-        time_to_expiration = None if now > expiry else expiry - now
+        license_expiry_time = datetime.strptime(attr["expiry"], "%Y-%m-%dT%H:%M:%S.%fZ")
 
     return SimpleNamespace(
         is_valid=data["meta"]["valid"],
         code=data["meta"]["constant"],
         timestamp=timestamp,
-        time_to_expiration=time_to_expiration,
         license_creation_time=created,
+        license_expiry_time=license_expiry_time,
     )
 
 
@@ -106,26 +113,37 @@ def validate_license_key_cached(
 
     assert isinstance(refresh_cache_period, timedelta)
 
-    data = _get_cache_data(
-        account_id, key, keygen_verify_key, cache_path, refresh_cache_period
-    )
+    data = _get_cache_data(account_id, key, keygen_verify_key, cache_path)
 
-    is_data_from_cache = data is not None
+    cache_too_old = False
+    if data is not None:
+        cache_date = datetime.strptime(data["meta"]["ts"], "%Y-%m-%dT%H:%M:%S.%fZ")
+        now = datetime.utcnow()
+        cache_age = now - cache_date
+        cache_too_old = cache_age > refresh_cache_period
 
-    if data is None:
+    is_data_from_cache = True
+    if data is None or cache_too_old:
         # fetch validation data
-        res = _api_call(account_id, key)
-        data = res.json()
-        # rewrite cache
-        cache_data = {
-            "_warning": "Do not edit! Any change will invalidate the cache.",
-            "signature": _string_to_dict(res.headers["Keygen-Signature"]),
-            "digest": res.headers["Digest"],
-            "date": res.headers["Date"],
-            "res": res.text,
-        }
-        with open(cache_path, "w") as f:
-            json.dump(cache_data, f, indent=2)
+        try:
+            res = _api_call(account_id, key)
+        # except requests.exceptions.ConnectionError:
+        except Exception:
+            is_data_from_cache = True
+        else:
+            is_data_from_cache = False
+            data = res.json()
+            is_data_from_cache = False
+            # rewrite cache
+            cache_data = {
+                "_warning": "Do not edit! Any change will invalidate the cache.",
+                "signature": _string_to_dict(res.headers["Keygen-Signature"]),
+                "digest": res.headers["Digest"],
+                "date": res.headers["Date"],
+                "res": res.text,
+            }
+            with open(cache_path, "w") as f:
+                json.dump(cache_data, f, indent=2)
 
     out = _create_return_value(data)
     out.is_data_from_cache = is_data_from_cache
@@ -133,11 +151,7 @@ def validate_license_key_cached(
 
 
 def _get_cache_data(
-    account_id: str,
-    key: str,
-    keygen_verify_key: str,
-    cache_path: Path | str,
-    refresh_cache_period: timedelta,
+    account_id: str, key: str, keygen_verify_key: str, cache_path: Path | str
 ):
     cache_path = Path(cache_path)
 
@@ -160,12 +174,6 @@ def _get_cache_data(
     res_data = json.loads(cache_data["res"])
 
     if res_data["data"]["attributes"]["key"] != key:
-        return None
-
-    cache_date = datetime.strptime(res_data["meta"]["ts"], "%Y-%m-%dT%H:%M:%S.%fZ")
-    now = datetime.utcnow()
-    cache_age = now - cache_date
-    if cache_age > refresh_cache_period:
         return None
 
     return res_data

@@ -27,8 +27,8 @@ The `out` object contains useful information such as
 out.is_valid
 out.code
 out.timestamp
-out.time_to_expiration
 out.license_creation_time
+out.license_expiry_time
 ```
 The validation result can also be safely cached with
 ```python
