@@ -10,7 +10,11 @@
 [![LGTM](https://img.shields.io/lgtm/grade/python/github/nschloe/keygen_licensing_tools.svg?style=flat-square)](https://lgtm.com/projects/g/nschloe/keygen_licensing_tools)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square)](https://github.com/psf/black)
 
-Some handy tools for the [Keygen](https://keygen.sh/) licensing service. Install with
+Some handy tools for the [Keygen](https://keygen.sh/) licensing service. (This
+is a user contribution, not an official Keygen LLC product. For Keygen
+software, see [here](https://github.com/keygen-sh).)
+
+Install with
 
 ```
 pip install keygen_licensing_tools
