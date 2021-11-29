@@ -3,13 +3,18 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
-import re
 from datetime import datetime, timedelta
 from pathlib import Path
 from types import SimpleNamespace
 
 import ed25519
 import requests
+
+from ._helpers import safeget, string_to_dict
+
+
+def _to_datetime(string):
+    return datetime.strptime(string, "%Y-%m-%dT%H:%M:%S.%fZ")
 
 
 def _api_call(account_id: str, key: str):
@@ -20,28 +25,6 @@ def _api_call(account_id: str, key: str):
             "Accept": "application/vnd.api+json",
         },
         data=json.dumps({"meta": {"key": key}}),
-    )
-
-
-def _string_to_dict(string: str) -> dict[str, str]:
-    """Convert a string like
-
-    "keyid=\"abc\", algorithm=\"ed25519\", signature=\"def==\", headers=\"(request-target) host date digest\""
-
-    to a dictionary
-
-    {
-        "keyid": "abc",
-        "algorithm" : "ed25519",
-        "signature": "def==",
-        "headers": "(request-target) host date digest"
-    }
-    """
-    return dict(
-        map(
-            lambda param: re.match('([^=]+)="([^"]+)"', param).group(1, 2),
-            re.split(r",\s*", string),
-        )
     )
 
 
@@ -64,7 +47,7 @@ def _create_return_value(data: dict | None):
 
     timestamp = meta.get("ts")
     if timestamp is not None:
-        timestamp = datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%S.%fZ")
+        timestamp = _to_datetime(timestamp)
 
     if "errors" in data:
         code = None
@@ -82,17 +65,13 @@ def _create_return_value(data: dict | None):
     is_valid = meta.get("valid", False)
     code = meta.get("constant")
 
-    license_creation_time = data["data"]["attributes"]["created"]
-    if license_creation_time is not None:
-        license_creation_time = datetime.strptime(
-            license_creation_time, "%Y-%m-%dT%H:%M:%S.%fZ"
-        )
+    license_creation_time = safeget(data, "data", "attributes", "created")
+    if isinstance(license_creation_time, str):
+        license_creation_time = _to_datetime(license_creation_time)
 
-    license_expiry_time = data["data"]["attributes"]["expiry"]
-    if license_expiry_time is not None:
-        license_expiry_time = datetime.strptime(
-            license_expiry_time, "%Y-%m-%dT%H:%M:%S.%fZ"
-        )
+    license_expiry_time = safeget(data, "data", "attributes", "expiry")
+    if isinstance(license_expiry_time, str):
+        license_expiry_time = _to_datetime(license_expiry_time)
 
     return SimpleNamespace(
         is_valid=is_valid,
@@ -119,7 +98,7 @@ def validate_license_key_cached(
 
     cache_too_old = False
     if data is not None:
-        cache_date = datetime.strptime(data["meta"]["ts"], "%Y-%m-%dT%H:%M:%S.%fZ")
+        cache_date = _to_datetime(data["meta"]["ts"])
         now = datetime.utcnow()
         cache_age = now - cache_date
         cache_too_old = cache_age > refresh_cache_period
@@ -140,7 +119,7 @@ def validate_license_key_cached(
                 # rewrite cache
                 cache_data = {
                     "_warning": "Do not edit! Any change will invalidate the cache.",
-                    "signature": _string_to_dict(res.headers["Keygen-Signature"]),
+                    "signature": string_to_dict(res.headers["Keygen-Signature"]),
                     "digest": res.headers["Digest"],
                     "date": res.headers["Date"],
                     "res": res.text,
