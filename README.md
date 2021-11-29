@@ -11,10 +11,13 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square)](https://github.com/psf/black)
 
 Some handy tools for the [Keygen](https://keygen.sh/) licensing service. Install with
+
 ```
 pip install keygen_licensing_tools
 ```
+
 and use as
+
 ```python
 from keygen_licensing_tools import validate_license_key_online
 
@@ -22,7 +25,9 @@ out = validate_license_key_online(
     account_id="demo", key="DEMO-DAD877-FCBF82-B83D5A-03E644-V3"
 )
 ```
+
 The `out` object contains useful information such as
+
 ```
 out.is_valid
 out.code
@@ -30,7 +35,9 @@ out.timestamp
 out.license_creation_time
 out.license_expiry_time
 ```
+
 The validation result can also be safely cached with
+
 ```python
 from datetime import timedelta
 from keygen_licensing_tools import validate_license_key_cached
@@ -57,13 +64,15 @@ elif cache_age > timedelta(days=7):
     exit(1)
 ```
 
-
 ### Testing
+
 To run the keygen_licensing_tools unit tests, check out this repository and do
+
 ```
 tox
 ```
 
 ### License
-keygen_licensing_tools is published under the [MIT
+
+This software is published under the [MIT
 license](https://en.wikipedia.org/wiki/MIT_License).
