@@ -46,8 +46,10 @@ out.license_expiry_time
 
 The validation result can also be safely cached with
 
+<!--pytest-codeblocks:skip-->
+
 ```python
-from datetime import timedelta
+from datetime import datetime, timedelta
 from keygen_licensing_tools import validate_license_key_cached
 
 out = validate_license_key_cached(
