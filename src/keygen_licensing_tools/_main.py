@@ -91,12 +91,15 @@ def validate_license_key_cached(
         account_id, key, keygen_verify_key, cache_path, refresh_cache_period_s
     )
 
+    is_data_from_cache = data is not None
+
     if data is None:
         # fetch validation data
         res = _api_call(account_id, key)
         data = res.json()
         # rewrite cache
         cache_data = {
+            "_warning": "Do not edit! Any change will invalidate the cache.",
             "signature": _string_to_dict(res.headers["Keygen-Signature"]),
             "digest": res.headers["Digest"],
             "date": res.headers["Date"],
@@ -105,7 +108,9 @@ def validate_license_key_cached(
         with open(cache_path, "w") as f:
             json.dump(cache_data, f, indent=2)
 
-    return _create_return_value(data)
+    out =_create_return_value(data)
+    out.is_data_from_cache = is_data_from_cache
+    return out
 
 
 def _get_cache_data(
@@ -131,8 +136,6 @@ def _get_cache_data(
         cache_data["res"],
     )
     if not cache_is_ok:
-        print("CACHE NOT OK!!!")
-        # cache_path.unlink()
         return None
 
     res_data = json.loads(cache_data["res"])
