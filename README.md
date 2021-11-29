@@ -40,7 +40,7 @@ out = validate_license_key_cached(
     key="the license key",
     keygen_verify_key="your Ed25519 128-bit Verify Key",
     cache_path="/tmp/license-cache.json",
-    refresh_cache_period_s=timedelta(days=3),
+    refresh_cache_period=timedelta(days=3),
 )
 ```
 

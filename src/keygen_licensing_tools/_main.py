@@ -60,16 +60,11 @@ def _create_return_value(data: dict | None):
             license_expiry_time=None,
         )
 
-    timestamp = datetime.strptime(data["meta"]["ts"], "%Y-%m-%dT%H:%M:%S.%fZ")
+    meta = data["meta"]
 
-    if data["data"] is None:
-        return SimpleNamespace(
-            is_valid=data["meta"]["valid"],
-            code=data["meta"]["constant"],
-            timestamp=timestamp,
-            license_creation_time=None,
-            license_expiry_time=None,
-        )
+    timestamp = meta.get("ts")
+    if timestamp is not None:
+        timestamp = datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%S.%fZ")
 
     if "errors" in data:
         code = None
@@ -84,19 +79,26 @@ def _create_return_value(data: dict | None):
             license_expiry_time=None,
         )
 
-    # string format: 2023-01-01T00:00:00.000Z
-    attr = data["data"]["attributes"]
-    created = datetime.strptime(attr["created"], "%Y-%m-%dT%H:%M:%S.%fZ")
-    if attr["expiry"] is None:
-        license_expiry_time = None
-    else:
-        license_expiry_time = datetime.strptime(attr["expiry"], "%Y-%m-%dT%H:%M:%S.%fZ")
+    is_valid = meta.get("valid", False)
+    code = meta.get("constant")
+
+    license_creation_time = data["data"]["attributes"]["created"]
+    if license_creation_time is not None:
+        license_creation_time = datetime.strptime(
+            license_creation_time, "%Y-%m-%dT%H:%M:%S.%fZ"
+        )
+
+    license_expiry_time = data["data"]["attributes"]["expiry"]
+    if license_expiry_time is not None:
+        license_expiry_time = datetime.strptime(
+            license_expiry_time, "%Y-%m-%dT%H:%M:%S.%fZ"
+        )
 
     return SimpleNamespace(
-        is_valid=data["meta"]["valid"],
-        code=data["meta"]["constant"],
+        is_valid=is_valid,
+        code=code,
         timestamp=timestamp,
-        license_creation_time=created,
+        license_creation_time=license_creation_time,
         license_expiry_time=license_expiry_time,
     )
 
@@ -129,21 +131,22 @@ def validate_license_key_cached(
             res = _api_call(account_id, key)
         # except requests.exceptions.ConnectionError:
         except Exception:
-            is_data_from_cache = True
+            pass
         else:
-            is_data_from_cache = False
             data = res.json()
-            is_data_from_cache = False
-            # rewrite cache
-            cache_data = {
-                "_warning": "Do not edit! Any change will invalidate the cache.",
-                "signature": _string_to_dict(res.headers["Keygen-Signature"]),
-                "digest": res.headers["Digest"],
-                "date": res.headers["Date"],
-                "res": res.text,
-            }
-            with open(cache_path, "w") as f:
-                json.dump(cache_data, f, indent=2)
+            if "errors" not in data:
+                is_data_from_cache = False
+
+                # rewrite cache
+                cache_data = {
+                    "_warning": "Do not edit! Any change will invalidate the cache.",
+                    "signature": _string_to_dict(res.headers["Keygen-Signature"]),
+                    "digest": res.headers["Digest"],
+                    "date": res.headers["Date"],
+                    "res": res.text,
+                }
+                with open(cache_path, "w") as f:
+                    json.dump(cache_data, f, indent=2)
 
     out = _create_return_value(data)
     out.is_data_from_cache = is_data_from_cache
