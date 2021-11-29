@@ -42,6 +42,19 @@ out = validate_license_key_cached(
     cache_path="/tmp/license-cache.json",
     refresh_cache_period=timedelta(days=3),
 )
+
+# Actually use the data:
+if not out.is_valid:
+    print(f"Error: Invalid license ({out.code}). Exiting.")
+    exit(1)
+
+now = datetime.utcnow()
+cache_age = now - out.timestamp
+if cache_age > timedelta(days=3) and cache_age < timedelta(days=7):
+    print("Warning: Could not validate license. Make sure to get online soon.")
+elif cache_age > timedelta(days=7):
+    print("Error: Could not validate license. Internet connection needed. Exiting.")
+    exit(1)
 ```
 
 
