@@ -45,17 +45,19 @@ def _string_to_dict(string: str) -> dict[str, str]:
     )
 
 
-def validate_license_key_online(account_id, key):
+def validate_license_key_online(account_id: str, key: str):
     res = _api_call(account_id, key)
     return _create_return_value(res.json())
 
 
 def _create_return_value(data: dict):
+    timestamp = datetime.strptime(data["meta"]["ts"], "%Y-%m-%dT%H:%M:%S.%fZ")
+
     if data["data"] is None:
         return SimpleNamespace(
             is_valid=data["meta"]["valid"],
             code=data["meta"]["constant"],
-            timestamp=data["meta"]["ts"],
+            timestamp=timestamp,
             time_to_expiration=None,
             license_creation_time=None,
         )
@@ -68,7 +70,7 @@ def _create_return_value(data: dict):
         return SimpleNamespace(
             is_valid=False,
             code=code,
-            timestamp=None,
+            timestamp=timestamp,
             time_to_expiration=None,
             license_creation_time=None,
         )
@@ -86,7 +88,7 @@ def _create_return_value(data: dict):
     return SimpleNamespace(
         is_valid=data["meta"]["valid"],
         code=data["meta"]["constant"],
-        timestamp=data["meta"]["ts"],
+        timestamp=timestamp,
         time_to_expiration=time_to_expiration,
         license_creation_time=created,
     )
