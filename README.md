@@ -32,6 +32,7 @@ out.license_creation_time
 ```
 The validation result can also be safely cached with
 ```python
+from datetime import timedelta
 from keygen_licensing_tools import validate_license_key_cached
 
 out = validate_license_key_cached(
@@ -39,7 +40,7 @@ out = validate_license_key_cached(
     key="the license key",
     keygen_verify_key="your Ed25519 128-bit Verify Key",
     cache_path="/tmp/license-cache.json",
-    refresh_cache_period_s=259200,  # three days
+    refresh_cache_period_s=timedelta(days=3),
 )
 ```
 

@@ -4,7 +4,7 @@ import base64
 import hashlib
 import json
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -82,7 +82,7 @@ def _create_return_value(data: dict):
         time_to_expiration = None
     else:
         expiry = datetime.strptime(attr["expiry"], "%Y-%m-%dT%H:%M:%S.%fZ")
-        now = datetime.now()
+        now = datetime.utcnow()
         time_to_expiration = None if now > expiry else expiry - now
 
     return SimpleNamespace(
@@ -99,10 +99,15 @@ def validate_license_key_cached(
     key: str,
     keygen_verify_key: str,
     cache_path: Path | str,
-    refresh_cache_period_s: int,
+    refresh_cache_period: timedelta | int,
 ):
+    if isinstance(refresh_cache_period, int):
+        refresh_cache_period = timedelta(seconds=refresh_cache_period)
+
+    assert isinstance(refresh_cache_period, timedelta)
+
     data = _get_cache_data(
-        account_id, key, keygen_verify_key, cache_path, refresh_cache_period_s
+        account_id, key, keygen_verify_key, cache_path, refresh_cache_period
     )
 
     is_data_from_cache = data is not None
@@ -132,7 +137,7 @@ def _get_cache_data(
     key: str,
     keygen_verify_key: str,
     cache_path: Path | str,
-    refresh_cache_period_s: int,
+    refresh_cache_period: timedelta,
 ):
     cache_path = Path(cache_path)
 
@@ -158,9 +163,9 @@ def _get_cache_data(
         return None
 
     cache_date = datetime.strptime(res_data["meta"]["ts"], "%Y-%m-%dT%H:%M:%S.%fZ")
-    now = datetime.now()
+    now = datetime.utcnow()
     cache_age = now - cache_date
-    if cache_age.seconds > refresh_cache_period_s:
+    if cache_age > refresh_cache_period:
         return None
 
     return res_data
