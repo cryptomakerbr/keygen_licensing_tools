@@ -51,6 +51,15 @@ def validate_license_key_online(account_id, key):
 
 
 def _create_return_value(data: dict):
+    if data["data"] is None:
+        return SimpleNamespace(
+            is_valid=data["meta"]["valid"],
+            code=data["meta"]["constant"],
+            timestamp=data["meta"]["ts"],
+            time_to_expiration=None,
+            license_creation_time=None,
+        )
+
     if "errors" in data:
         code = None
         err = data["errors"][0]
@@ -67,9 +76,12 @@ def _create_return_value(data: dict):
     # string format: 2023-01-01T00:00:00.000Z
     attr = data["data"]["attributes"]
     created = datetime.strptime(attr["created"], "%Y-%m-%dT%H:%M:%S.%fZ")
-    expiry = datetime.strptime(attr["expiry"], "%Y-%m-%dT%H:%M:%S.%fZ")
-    now = datetime.now()
-    time_to_expiration = None if now > expiry else expiry - now
+    if attr["expiry"] is None:
+        time_to_expiration = None
+    else:
+        expiry = datetime.strptime(attr["expiry"], "%Y-%m-%dT%H:%M:%S.%fZ")
+        now = datetime.now()
+        time_to_expiration = None if now > expiry else expiry - now
 
     return SimpleNamespace(
         is_valid=data["meta"]["valid"],
@@ -108,7 +120,7 @@ def validate_license_key_cached(
         with open(cache_path, "w") as f:
             json.dump(cache_data, f, indent=2)
 
-    out =_create_return_value(data)
+    out = _create_return_value(data)
     out.is_data_from_cache = is_data_from_cache
     return out
 

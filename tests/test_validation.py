@@ -13,9 +13,9 @@ import keygen_licensing_tools
         ("DEMO-DAD877-FCBF82-B83D5A-03E644-V3", True, "VALID"),
         ("X-DEMO-DAD877-FCBF82-B83D5A-03E644-V3", False, "NOT_FOUND"),
         ("DEMO-2233AF-72BF07-19CB6B-26EAEA-V3", False, "EXPIRED"),
+        ("DEMO-6EB0EA-54BE79-3679CD-6CFCAE-V3", False, "SUSPENDED"),
         # Missing entitlements:
         ("DEMO-2D479F-C8C9C8-BD6A82-A6DB80-V3", True, "VALID"),
-        ("DEMO-6EB0EA-54BE79-3679CD-6CFCAE-V3", False, "SUSPENDED"),
     ],
 )
 def test_validation(key, is_valid, code):
