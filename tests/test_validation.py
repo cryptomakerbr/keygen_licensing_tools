@@ -35,7 +35,7 @@ def test_validation_errors(key, code):
     with pytest.raises(keygen_licensing_tools.ValidationError) as e:
         keygen_licensing_tools.validate_license_key_online(account, key)
 
-    assert e.value.error_code == code
+    assert e.value.code == code
 
 
 @pytest.mark.skip("Don't know demo account's verify key")
