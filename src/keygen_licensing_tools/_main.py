@@ -10,11 +10,8 @@ from types import SimpleNamespace
 import ed25519
 import requests
 
-from ._helpers import safeget, string_to_dict
-
-
-def _to_datetime(string):
-    return datetime.strptime(string, "%Y-%m-%dT%H:%M:%S.%fZ")
+from ._exceptions import ValidationError
+from ._helpers import safeget, string_to_dict, to_datetime
 
 
 def _api_call(account_id: str, key: str):
@@ -35,46 +32,36 @@ def validate_license_key_online(account_id: str, key: str):
 
 def _create_return_value(data: dict | None):
     if data is None:
-        return SimpleNamespace(
-            is_valid=False,
-            code="ERR",
-            timestamp=None,
-            license_creation_time=None,
-            license_expiry_time=None,
-        )
+        raise ValidationError("Key validation failed", "ERR")
 
     meta = data["meta"]
 
     timestamp = meta.get("ts")
     if timestamp is not None:
-        timestamp = _to_datetime(timestamp)
+        timestamp = to_datetime(timestamp)
 
     if "errors" in data:
         code = None
         err = data["errors"][0]
         if "code" in err:
             code = err["code"]
-        return SimpleNamespace(
-            is_valid=False,
-            code=code,
-            timestamp=timestamp,
-            license_creation_time=None,
-            license_expiry_time=None,
-        )
+        raise ValidationError("Key validation failed", code, timestamp)
+
+    license_creation_time = safeget(data, "data", "attributes", "created")
+    if isinstance(license_creation_time, str):
+        license_creation_time = to_datetime(license_creation_time)
+
+    license_expiry_time = safeget(data, "data", "attributes", "expiry")
+    if isinstance(license_expiry_time, str):
+        license_expiry_time = to_datetime(license_expiry_time)
 
     is_valid = meta.get("valid", False)
     code = meta.get("constant")
 
-    license_creation_time = safeget(data, "data", "attributes", "created")
-    if isinstance(license_creation_time, str):
-        license_creation_time = _to_datetime(license_creation_time)
-
-    license_expiry_time = safeget(data, "data", "attributes", "expiry")
-    if isinstance(license_expiry_time, str):
-        license_expiry_time = _to_datetime(license_expiry_time)
+    if not is_valid:
+        raise ValidationError("Key validation failed", code, timestamp)
 
     return SimpleNamespace(
-        is_valid=is_valid,
         code=code,
         timestamp=timestamp,
         license_creation_time=license_creation_time,
@@ -98,7 +85,7 @@ def validate_license_key_cached(
 
     cache_too_old = False
     if data is not None:
-        cache_date = _to_datetime(data["meta"]["ts"])
+        cache_date = to_datetime(data["meta"]["ts"])
         now = datetime.utcnow()
         cache_age = now - cache_date
         cache_too_old = cache_age > refresh_cache_period
@@ -155,7 +142,7 @@ def _get_cache_data(
 
     res_data = json.loads(cache_data["res"])
 
-    if res_data["data"]["attributes"]["key"] != key:
+    if safeget(res_data, "data", "attributes", "key") != key:
         return None
 
     return res_data

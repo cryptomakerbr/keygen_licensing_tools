@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from datetime import datetime
 
 
 def string_to_dict(string: str) -> dict[str, str]:
@@ -32,3 +33,7 @@ def safeget(dct: dict, *keys):
         except (KeyError, TypeError):
             return None
     return dct
+
+
+def to_datetime(string):
+    return datetime.strptime(string, "%Y-%m-%dT%H:%M:%S.%fZ")
