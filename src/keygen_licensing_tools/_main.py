@@ -146,7 +146,7 @@ def _get_cache_data(
 
     res_data = json.loads(cache_data["res"])
 
-    if res_data["data"]["attributes"]["key"] != key:
+    if safeget(res_data, "data", "attributes", "key") != key:
         return None
 
     return res_data
