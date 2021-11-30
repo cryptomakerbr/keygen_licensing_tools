@@ -8,21 +8,35 @@ import keygen_licensing_tools
 
 # https://keygen.sh/demo/license-key-validation/
 @pytest.mark.parametrize(
-    "key, is_valid, code",
+    "key",
     [
-        ("DEMO-DAD877-FCBF82-B83D5A-03E644-V3", True, "VALID"),
-        ("X-DEMO-DAD877-FCBF82-B83D5A-03E644-V3", False, "NOT_FOUND"),
-        ("DEMO-2233AF-72BF07-19CB6B-26EAEA-V3", False, "EXPIRED"),
-        ("DEMO-6EB0EA-54BE79-3679CD-6CFCAE-V3", False, "SUSPENDED"),
+        "DEMO-DAD877-FCBF82-B83D5A-03E644-V3",
         # Missing entitlements:
-        ("DEMO-2D479F-C8C9C8-BD6A82-A6DB80-V3", True, "VALID"),
+        "DEMO-2D479F-C8C9C8-BD6A82-A6DB80-V3",
     ],
 )
-def test_validation(key, is_valid, code):
+def test_validation_success(key):
     account = "demo"
     out = keygen_licensing_tools.validate_license_key_online(account, key)
-    assert out.is_valid == is_valid
-    assert out.code == code
+    assert out.is_valid
+    assert out.code == "VALID"
+
+
+# https://keygen.sh/demo/license-key-validation/
+@pytest.mark.parametrize(
+    "key, code",
+    [
+        ("X-DEMO-DAD877-FCBF82-B83D5A-03E644-V3", "NOT_FOUND"),
+        ("DEMO-2233AF-72BF07-19CB6B-26EAEA-V3", "EXPIRED"),
+        ("DEMO-6EB0EA-54BE79-3679CD-6CFCAE-V3", "SUSPENDED"),
+    ],
+)
+def test_validation_errors(key, code):
+    account = "demo"
+    with pytest.raises(keygen_licensing_tools.ValidationError) as e:
+        keygen_licensing_tools.validate_license_key_online(account, key)
+
+    assert e.value.error_code == code
 
 
 @pytest.mark.skip("Don't know demo account's verify key")

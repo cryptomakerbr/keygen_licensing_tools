@@ -10,6 +10,7 @@ from types import SimpleNamespace
 import ed25519
 import requests
 
+from ._exceptions import ValidationError
 from ._helpers import safeget, string_to_dict
 
 
@@ -35,13 +36,7 @@ def validate_license_key_online(account_id: str, key: str):
 
 def _create_return_value(data: dict | None):
     if data is None:
-        return SimpleNamespace(
-            is_valid=False,
-            code="ERR",
-            timestamp=None,
-            license_creation_time=None,
-            license_expiry_time=None,
-        )
+        raise ValidationError("Key validation failed", "ERR")
 
     meta = data["meta"]
 
@@ -54,13 +49,7 @@ def _create_return_value(data: dict | None):
         err = data["errors"][0]
         if "code" in err:
             code = err["code"]
-        return SimpleNamespace(
-            is_valid=False,
-            code=code,
-            timestamp=timestamp,
-            license_creation_time=None,
-            license_expiry_time=None,
-        )
+        raise ValidationError("Key validation failed", code, timestamp)
 
     is_valid = meta.get("valid", False)
     code = meta.get("constant")
@@ -72,6 +61,9 @@ def _create_return_value(data: dict | None):
     license_expiry_time = safeget(data, "data", "attributes", "expiry")
     if isinstance(license_expiry_time, str):
         license_expiry_time = _to_datetime(license_expiry_time)
+
+    if not is_valid:
+        raise ValidationError("Key validation failed", code, timestamp)
 
     return SimpleNamespace(
         is_valid=is_valid,
