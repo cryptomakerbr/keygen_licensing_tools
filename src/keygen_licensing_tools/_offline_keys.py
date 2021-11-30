@@ -12,6 +12,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 
 from ._exceptions import ValidationError
+from ._helpers import to_datetime
 
 
 def validate_offline_key(
@@ -31,7 +32,16 @@ def validate_offline_key(
     else:
         _verify_rsa(license_scheme, keygen_verify_key, sig, msg)
 
-    return json.loads(key)
+    data = json.loads(key)
+
+    # convert some strings to datetime objects
+    if "license" in data:
+        lic = data["license"]
+        for key in ["created", "expiry"]:
+            if key in lic:
+                lic[key] = to_datetime(lic[key])
+
+    return data
 
 
 def _verify_ed25519(keygen_verify_key, sig, msg):

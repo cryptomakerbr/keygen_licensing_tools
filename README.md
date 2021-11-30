@@ -81,9 +81,8 @@ For _offline validation_, use
 ```python
 from keygen_licensing_tools import validate_offline_key
 
-license_scheme = (
-    "ED25519_SIGN"  # or "RSA_2048_PKCS1_SIGN_V2", "RSA_2048_PKCS1_PSS_SIGN_V2"
-)
+# or "RSA_2048_PKCS1_SIGN_V2", "RSA_2048_PKCS1_PSS_SIGN_V2":
+license_scheme = "ED25519_SIGN"
 keygen_verify_key = "your public verify key"
 license_key = "your offline license key"
 
