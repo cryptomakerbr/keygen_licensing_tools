@@ -51,9 +51,6 @@ def _create_return_value(data: dict | None):
             code = err["code"]
         raise ValidationError("Key validation failed", code, timestamp)
 
-    is_valid = meta.get("valid", False)
-    code = meta.get("constant")
-
     license_creation_time = safeget(data, "data", "attributes", "created")
     if isinstance(license_creation_time, str):
         license_creation_time = _to_datetime(license_creation_time)
@@ -62,11 +59,13 @@ def _create_return_value(data: dict | None):
     if isinstance(license_expiry_time, str):
         license_expiry_time = _to_datetime(license_expiry_time)
 
+    is_valid = meta.get("valid", False)
+    code = meta.get("constant")
+
     if not is_valid:
         raise ValidationError("Key validation failed", code, timestamp)
 
     return SimpleNamespace(
-        is_valid=is_valid,
         code=code,
         timestamp=timestamp,
         license_creation_time=license_creation_time,

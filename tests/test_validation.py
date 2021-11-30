@@ -18,7 +18,6 @@ import keygen_licensing_tools
 def test_validation_success(key):
     account = "demo"
     out = keygen_licensing_tools.validate_license_key_online(account, key)
-    assert out.is_valid
     assert out.code == "VALID"
 
 
